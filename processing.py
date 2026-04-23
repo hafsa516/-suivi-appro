@@ -3,7 +3,6 @@ import re
 import datetime
 import os
 from openpyxl import load_workbook
-from openpyxl.styles import PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 
@@ -172,7 +171,7 @@ def traiter_excel(filepath, log_fn, progress_fn):
 
     progress_fn(80)
 
-    log_fn("💾 Écriture dans le fichier Excel d'origine...")
+    log_fn("💾 Écriture dans le fichier Excel...")
     wb = load_workbook(filepath)
 
     for nom in ["Résultat", "Tableau confirmation"]:
@@ -181,4 +180,18 @@ def traiter_excel(filepath, log_fn, progress_fn):
 
     ws_res = wb.create_sheet("Résultat")
     for r in dataframe_to_rows(df_final, index=False, header=True):
-        ws_res.a
+        ws_res.append(r)
+    log_fn("✅ Feuille 'Résultat' ajoutée (sans colorisation)")
+
+    if not df_out.empty:
+        ws_conf = wb.create_sheet("Tableau confirmation")
+        for r in dataframe_to_rows(df_out, index=False, header=True):
+            ws_conf.append(r)
+        log_fn(f"✅ Feuille 'Tableau confirmation' ajoutée ({len(df_out)} lignes)")
+    else:
+        log_fn("⚠️  Tableau confirmation vide — feuille non créée")
+
+    wb.save(filepath)
+    log_fn(f"💾 Fichier sauvegardé : {os.path.basename(filepath)}")
+    progress_fn(100)
+    log_fn("🎉 Traitement terminé avec succès !")
