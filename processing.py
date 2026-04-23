@@ -153,14 +153,14 @@ def traiter_excel(filepath, log_fn, progress_fn):
             lambda x: x + ',' if x != '' else '') if col_cde_cmd else ''
         df_out['n°poste'] = df_confirmation[col_poste_cmd].str.strip().apply(
             lambda x: x + ',' if x != '' else '') if col_poste_cmd else ''
-        df_out['Fournisseur']          = df_confirmation[col_fourn].str.strip()  if col_fourn  else ''
-        df_out['référence']            = df_confirmation[col_art].str.strip()    if col_art    else ''
-        df_out['Désignation']          = df_confirmation[col_desig].str.strip()  if col_desig  else ''
-        df_out['date de confirmation'] = df_confirmation[col_leadtime].apply(week_to_friday)
-        df_out['Qte confirmée']        = df_confirmation[col_qte].str.strip()    if col_qte    else ''
+        df_out['Fournisseur']            = df_confirmation[col_fourn].str.strip()  if col_fourn  else ''
+        df_out['référence']              = df_confirmation[col_art].str.strip()    if col_art    else ''
+        df_out['Désignation']            = df_confirmation[col_desig].str.strip()  if col_desig  else ''
+        df_out['date de confirmation']   = df_confirmation[col_leadtime].apply(week_to_friday)
+        df_out['Qte confirmée']          = df_confirmation[col_qte].str.strip()    if col_qte    else ''
         df_out['référence confirmation'] = df_out['date de confirmation'].apply(calculer_confirmation)
-        df_out['Unité']                = df_confirmation[col_uac].str.strip()    if col_uac    else ''
-        df_out['CA']                   = df_confirmation[col_charge].str.strip() if col_charge else ''
+        df_out['Unité']                  = df_confirmation[col_uac].str.strip()    if col_uac    else ''
+        df_out['CA']                     = df_confirmation[col_charge].str.strip() if col_charge else ''
 
         nb_avant = len(df_out)
         df_out = df_out[df_out['référence confirmation'] != ''].copy()
@@ -181,36 +181,4 @@ def traiter_excel(filepath, log_fn, progress_fn):
 
     ws_res = wb.create_sheet("Résultat")
     for r in dataframe_to_rows(df_final, index=False, header=True):
-        ws_res.append(r)
-
-    col_lt_final = trouver_col(df_final, 'LEADTIME')
-if col_lt_final:
-    nb_cols = len(df_final.columns)
-    fill_bleu  = PatternFill("solid", fgColor="ADD8E6")
-    fill_rouge = PatternFill("solid", fgColor="F29999")
-    vals = df_final[col_lt_final].astype(str).str.upper().tolist()
-    for i, val in enumerate(vals, start=2):
-        if val == 'W/O FRNS':
-            fill = fill_bleu
-        elif re.search(r'W\d+', val):
-            fill = fill_rouge
-        else:
-            continue
-        row_cells = ws_res[i]
-        for cell in row_cells:
-            cell.fill = fill
-
-    log_fn("✅ Feuille 'Résultat' ajoutée")
-
-    if not df_out.empty:
-        ws_conf = wb.create_sheet("Tableau confirmation")
-        for r in dataframe_to_rows(df_out, index=False, header=True):
-            ws_conf.append(r)
-        log_fn(f"✅ Feuille 'Tableau confirmation' ajoutée ({len(df_out)} lignes)")
-    else:
-        log_fn("⚠️  Tableau confirmation vide — feuille non créée")
-
-    wb.save(filepath)
-    log_fn(f"💾 Fichier sauvegardé : {os.path.basename(filepath)}")
-    progress_fn(100)
-    log_fn("🎉 Traitement terminé avec succès !")
+        ws_res.a
