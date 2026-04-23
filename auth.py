@@ -6,27 +6,20 @@ import re
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-
 def _email_valide(email: str) -> bool:
-    # Option 1 — tout email valide
     return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email))
 
-    # Option 2 — uniquement ton entreprise (décommente si besoin)
-    # return email.strip().endswith("@tonentreprise.com")
-
-
-_tokens = {}
-
+@st.cache_resource
+def get_tokens():
+    return {}
 
 def _send_magic_link(email: str, token: str):
     app_url = st.secrets["app"]["url"]
     link = f"{app_url}?token={token}"
-
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "🔐 Votre lien de connexion — Suivi Appro"
     msg["From"] = st.secrets["gmail"]["sender"]
     msg["To"] = email
-
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:auto;
                 padding:32px;border-radius:12px;background:#f9f9f9;">
@@ -45,7 +38,6 @@ def _send_magic_link(email: str, token: str):
     </div>
     """
     msg.attach(MIMEText(html, "html"))
-
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(
             st.secrets["gmail"]["sender"],
@@ -53,31 +45,28 @@ def _send_magic_link(email: str, token: str):
         )
         server.send_message(msg)
 
-
 def _create_token(email: str) -> str:
     token = secrets.token_urlsafe(32)
-    _tokens[token] = {
+    get_tokens()[token] = {
         "email": email,
         "expires": time.time() + 600
     }
     return token
 
-
 def _verify_token(token: str):
-    data = _tokens.get(token)
+    tokens = get_tokens()
+    data = tokens.get(token)
     if not data:
         return None
     if time.time() > data["expires"]:
-        del _tokens[token]
+        del tokens[token]
         return None
-    del _tokens[token]
+    del tokens[token]
     return data["email"]
-
 
 def login_page() -> bool:
     if st.session_state.get("authenticated"):
         return True
-
     token = st.query_params.get("token")
     if token:
         email = _verify_token(token)
@@ -89,7 +78,6 @@ def login_page() -> bool:
         else:
             st.error("❌ Lien invalide ou expiré.")
         return False
-
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("## 📊 Suivi Appro")
@@ -109,7 +97,6 @@ def login_page() -> bool:
                 except Exception as e:
                     st.error(f"❌ Erreur : {e}")
     return False
-
 
 def logout():
     st.session_state.clear()
