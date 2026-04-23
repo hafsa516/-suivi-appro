@@ -184,17 +184,21 @@ def traiter_excel(filepath, log_fn, progress_fn):
         ws_res.append(r)
 
     col_lt_final = trouver_col(df_final, 'LEADTIME')
-    if col_lt_final:
-        nb_cols = len(df_final.columns)
-        for i, val in enumerate(df_final[col_lt_final].astype(str).str.upper(), start=2):
-            if val == 'W/O FRNS':
-                fill = PatternFill("solid", fgColor="ADD8E6")
-            elif re.search(r'W\d+', val):
-                fill = PatternFill("solid", fgColor="F29999")
-            else:
-                continue
-            for col_i in range(1, nb_cols + 1):
-                ws_res.cell(row=i, column=col_i).fill = fill
+if col_lt_final:
+    nb_cols = len(df_final.columns)
+    fill_bleu  = PatternFill("solid", fgColor="ADD8E6")
+    fill_rouge = PatternFill("solid", fgColor="F29999")
+    vals = df_final[col_lt_final].astype(str).str.upper().tolist()
+    for i, val in enumerate(vals, start=2):
+        if val == 'W/O FRNS':
+            fill = fill_bleu
+        elif re.search(r'W\d+', val):
+            fill = fill_rouge
+        else:
+            continue
+        row_cells = ws_res[i]
+        for cell in row_cells:
+            cell.fill = fill
 
     log_fn("✅ Feuille 'Résultat' ajoutée")
 
