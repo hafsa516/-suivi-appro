@@ -265,13 +265,26 @@ def traiter_excel(file_obj, log_fn, progress_fn):
         df_out['Unité']                  = df_conf[col_uac].str.strip() if col_uac else ''
         df_out['CA']                     = df_conf[col_charge].str.strip() if col_charge else ''
 
+        # Compter avant filtrage
+        nb_avant = len(df_out)
+        
+        # Filtrer les lignes avec référence confirmation vide
+        df_out = df_out[df_out['Référence confirmation'] != ''].copy()
+        
         # Remplir les valeurs vides et réinitialiser l'index
         df_out = df_out.fillna('').reset_index(drop=True)
         
-        # Compter les lignes par type
-        nb_w_ra = len(df_conf[df_conf[col_leadtime].str.upper() == 'W/O RA'])
-        nb_w_digit = len(df_conf) - nb_w_ra
-        log_fn(f"   {len(df_out)} lignes confirmation (W\\d+: {nb_w_digit}, W/O RA: {nb_w_ra})", "info")
+        # Compter les lignes par type après filtrage
+        if not df_out.empty and col_leadtime in df_conf.columns:
+            # Récupérer les indices des lignes conservées
+            indices_conserves = df_out.index.tolist()
+            # Compter les W/O RA dans les lignes conservées
+            nb_w_ra = len(df_conf.loc[df_conf.index.isin(indices_conserves) & 
+                                      (df_conf[col_leadtime].str.upper() == 'W/O RA')])
+            nb_w_digit = len(df_out) - nb_w_ra
+            log_fn(f"   {len(df_out)} lignes confirmation ({nb_avant - len(df_out)} ignorées) - W\\d+: {nb_w_digit}, W/O RA: {nb_w_ra}", "info")
+        else:
+            log_fn(f"   {len(df_out)} lignes confirmation ({nb_avant - len(df_out)} ignorées)", "info")
         
     else:
         df_out = pd.DataFrame()
