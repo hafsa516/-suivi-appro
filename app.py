@@ -198,12 +198,12 @@ def traiter_excel(file_obj, log_fn, progress_fn):
     log_fn("📊 Construction tableau confirmation...", "info")
     col_leadtime = trouver_col(df_final, 'LEADTIME')
     if col_leadtime:
-      df_conf = df_final[
-        df_final[col_leadtime].str.upper().str.contains(r'W\d+', regex=True, na=False) |
-        df_final[col_leadtime].str.upper() == 'W/O RA'
-    ].copy()
+        df_conf = df_final[
+            df_final[col_leadtime].str.upper().str.contains(r'W\d+', regex=True, na=False) |
+            (df_final[col_leadtime].str.upper() == 'W/O RA')
+        ].copy()
 
-    col_cde_cmd   = trouver_col(df_conf, 'Doc_achat')
+        col_cde_cmd   = trouver_col(df_conf, 'Doc_achat')
         col_poste_cmd = trouver_col(df_conf, 'Poste')
         col_fourn     = trouver_col(df_conf, 'Fourn/Div_fourn')
         col_art       = trouver_col(df_conf, 'Article')
