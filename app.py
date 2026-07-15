@@ -278,7 +278,7 @@ else:
         output_buffer = ecrire_xlsxwriter(df_final, df_out, col_leadtime)
     except Exception as e:
         log_fn(f"❌ Erreur lors de l'écriture : {e}", "error")
-        return None, None, None
+    return None, None, None
 
     progress_fn(100)
     duree = (datetime.datetime.now() - debut).seconds
