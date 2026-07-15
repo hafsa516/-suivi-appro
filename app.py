@@ -203,7 +203,7 @@ def traiter_excel(file_obj, log_fn, progress_fn):
         df_final[col_leadtime].str.upper() == 'W/O RA'
     ].copy()
 
-        col_cde_cmd   = trouver_col(df_conf, 'Doc_achat')
+    col_cde_cmd   = trouver_col(df_conf, 'Doc_achat')
         col_poste_cmd = trouver_col(df_conf, 'Poste')
         col_fourn     = trouver_col(df_conf, 'Fourn/Div_fourn')
         col_art       = trouver_col(df_conf, 'Article')
