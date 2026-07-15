@@ -92,14 +92,12 @@ def ecrire_xlsxwriter(df_final, df_out, col_lt):
     for r_idx, row in enumerate(df_final.itertuples(index=False), start=1):
         row_data = list(row)
         lt_val   = str(row_data[lt_idx]).upper() if lt_idx >= 0 else ''
-
         if lt_val == 'W/O FRNS':
             fmt = fmt_bleu
-        elif re.search(r'W\d+', lt_val):
+        elif re.search(r'W\d+', lt_val) or lt_val == 'W/O RA':
             fmt = fmt_rouge
         else:
             fmt = fmt_normal
-
         ws_res.set_row(r_idx, None, fmt)
         ws_res.write_row(r_idx, 0, row_data)
 
