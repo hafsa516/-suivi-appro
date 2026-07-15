@@ -193,55 +193,82 @@ def traiter_excel(file_obj, log_fn, progress_fn):
     df_final = df_final.drop(columns=cols_a_supprimer, errors='ignore').fillna('')
     log_fn(f"   {len(df_final)} lignes, {len(df_final.columns)} colonnes", "info")
     progress_fn(55)
-
     # Étape 4 : Tableau Confirmation
-    log_fn("📊 Construction tableau confirmation...", "info")
-    col_leadtime = trouver_col(df_final, 'LEADTIME')
-    if col_leadtime:
-        df_conf = df_final[
-            df_final[col_leadtime].str.upper().str.contains(r'W\d+', regex=True, na=False) |
-            (df_final[col_leadtime].str.upper() == 'W/O RA')
-        ].copy()
+log_fn("📊 Construction tableau confirmation...", "info")
+col_leadtime = trouver_col(df_final, 'LEADTIME')
+if col_leadtime:
+    # Filtrer les lignes avec W\d+ ou W/O RA
+    df_conf = df_final[
+        df_final[col_leadtime].str.upper().str.contains(r'W\d+', regex=True, na=False) |
+        (df_final[col_leadtime].str.upper() == 'W/O RA')
+    ].copy()
 
-        col_cde_cmd   = trouver_col(df_conf, 'Doc_achat')
-        col_poste_cmd = trouver_col(df_conf, 'Poste')
-        col_fourn     = trouver_col(df_conf, 'Fourn/Div_fourn')
-        col_art       = trouver_col(df_conf, 'Article')
-        col_desig     = trouver_col(df_conf, 'Designation')
-        col_uac       = trouver_col(df_conf, 'UAc')
-        col_qte       = trouver_col(df_conf, 'A_livrer')
+    col_cde_cmd   = trouver_col(df_conf, 'Doc_achat')
+    col_poste_cmd = trouver_col(df_conf, 'Poste')
+    col_fourn     = trouver_col(df_conf, 'Fourn/Div_fourn')
+    col_art       = trouver_col(df_conf, 'Article')
+    col_desig     = trouver_col(df_conf, 'Designation')
+    col_uac       = trouver_col(df_conf, 'UAc')
+    col_qte       = trouver_col(df_conf, 'A_livrer')
 
-        noms_charge = ['Chargé appro', 'Charge appro', "Chargé d'appro",
-                       'Chargé Appro', 'CHARGE APPRO', 'CA', 'CHARGE APPRO_cmd']
-        col_charge = next(
-            (trouver_col(df_conf, n) for n in noms_charge
-             if trouver_col(df_conf, n) is not None), None)
-        if col_charge is None:
-            for n in noms_charge:
-                if (n + '_cmd') in df_conf.columns:
-                    col_charge = n + '_cmd'
-                    break
+    noms_charge = ['Chargé appro', 'Charge appro', "Chargé d'appro",
+                   'Chargé Appro', 'CHARGE APPRO', 'CA', 'CHARGE APPRO_cmd']
+    col_charge = next(
+        (trouver_col(df_conf, n) for n in noms_charge
+         if trouver_col(df_conf, n) is not None), None)
+    if col_charge is None:
+        for n in noms_charge:
+            if (n + '_cmd') in df_conf.columns:
+                col_charge = n + '_cmd'
+                break
 
-        df_out = pd.DataFrame()
-        df_out['NO commande']            = df_conf[col_cde_cmd].str.strip().str.upper() + ','  if col_cde_cmd   else ''
-        df_out['n° poste']               = df_conf[col_poste_cmd].str.strip() + ','            if col_poste_cmd else ''
-        df_out['Fournisseur']            = df_conf[col_fourn].str.strip()                      if col_fourn     else ''
-        df_out['référence']              = df_conf[col_art].str.strip()                        if col_art       else ''
-        df_out['Désignation']            = df_conf[col_desig].str.strip()                      if col_desig     else ''
-        df_out['date de confirmation']   = df_conf[col_leadtime].apply(week_to_friday)
-        df_out['Qte confirmée']          = df_conf[col_qte].str.strip()                        if col_qte       else ''
-        df_out['Référence confirmation'] = df_out['date de confirmation'].apply(calculer_confirmation)
-        df_out['Unité']                  = df_conf[col_uac].str.strip()                        if col_uac       else ''
-        df_out['CA']                     = df_conf[col_charge].str.strip()                     if col_charge    else ''
+    # Fonction pour obtenir la date de confirmation
+    def get_friday_of_current_week():
+        """Retourne le vendredi de la semaine en cours au format DD.MM.YYYY"""
+        aujourd_hui = datetime.datetime.now()
+        days_until_friday = (4 - aujourd_hui.weekday()) % 7  # 4 = Friday
+        vendredi = aujourd_hui + datetime.timedelta(days=days_until_friday)
+        return vendredi.strftime('%d.%m.%Y')
+    
+    # Fonction pour traiter chaque ligne
+    def process_row(row):
+        lt_val = str(row[col_leadtime]).upper()
+        
+        if lt_val == 'W/O RA':
+            date_conf = get_friday_of_current_week()
+            ref_conf = 'CONFD3'
+        else:
+            date_conf = week_to_friday(lt_val)
+            ref_conf = calculer_confirmation(date_conf)
+        
+        return pd.Series({
+            'date_conf': date_conf,
+            'ref_conf': ref_conf
+        })
 
-        nb_avant = len(df_out)
-        df_out   = df_out[df_out['Référence confirmation'] != ''].copy()
-        df_out   = df_out.fillna('').reset_index(drop=True)
-        log_fn(f"   {len(df_out)} lignes confirmation ({nb_avant - len(df_out)} ignorées)", "info")
-    else:
-        df_out = pd.DataFrame()
-        log_fn("⚠️  Colonne LEADTIME introuvable", "warning")
+    # Appliquer le traitement
+    df_conf[['date_de_confirmation', 'reference_confirmation']] = df_conf.apply(process_row, axis=1)
 
+    # Construction du DataFrame final
+    df_out = pd.DataFrame()
+    df_out['NO commande']            = df_conf[col_cde_cmd].str.strip().str.upper() + ',' if col_cde_cmd else ''
+    df_out['n° poste']               = df_conf[col_poste_cmd].str.strip() + ',' if col_poste_cmd else ''
+    df_out['Fournisseur']            = df_conf[col_fourn].str.strip() if col_fourn else ''
+    df_out['référence']              = df_conf[col_art].str.strip() if col_art else ''
+    df_out['Désignation']            = df_conf[col_desig].str.strip() if col_desig else ''
+    df_out['date de confirmation']   = df_conf['date_de_confirmation']
+    df_out['Qte confirmée']          = df_conf[col_qte].str.strip() if col_qte else ''
+    df_out['Référence confirmation'] = df_conf['reference_confirmation']
+    df_out['Unité']                  = df_conf[col_uac].str.strip() if col_uac else ''
+    df_out['CA']                     = df_conf[col_charge].str.strip() if col_charge else ''
+
+    # Remplir les valeurs vides et réinitialiser l'index
+    df_out = df_out.fillna('').reset_index(drop=True)
+    log_fn(f"   {len(df_out)} lignes confirmation", "info")
+    
+else:
+    df_out = pd.DataFrame()
+    log_fn("⚠️  Colonne LEADTIME introuvable", "warning")
     progress_fn(70)
 
     # Étape 5 : Écriture
