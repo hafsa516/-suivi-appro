@@ -198,7 +198,7 @@ def traiter_excel(file_obj, log_fn, progress_fn):
     log_fn("📊 Construction tableau confirmation...", "info")
     col_leadtime = trouver_col(df_final, 'LEADTIME')
     if col_leadtime:
-    df_conf = df_final[
+      df_conf = df_final[
         df_final[col_leadtime].str.upper().str.contains(r'W\d+', regex=True, na=False) |
         df_final[col_leadtime].str.upper() == 'W/O RA'
     ].copy()
